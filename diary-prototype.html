@@ -623,16 +623,31 @@ function setDriveStatus(text, connected){
   el.classList.toggle('connected', !!connected);
 }
 
+// 클라이언트 ID / 계정 이메일을 이 브라우저에 기억해두고, 다음에 자동으로 채워준다.
+(function(){
+  try{
+    const savedId = localStorage.getItem('diary_client_id');
+    const savedHint = localStorage.getItem('diary_account_hint');
+    if(savedId) document.getElementById('gclient-id').value = savedId;
+    if(savedHint) document.getElementById('gaccount-hint').value = savedHint;
+  }catch(e){}
+})();
+
 function connectGoogleDrive(){
   const clientId = document.getElementById('gclient-id').value.trim();
   const accountHint = document.getElementById('gaccount-hint').value.trim();
   if(!clientId){ alert('먼저 Google OAuth 클라이언트 ID를 입력해주세요.'); return; }
   if(typeof google === 'undefined'){ setDriveStatus('Google 로그인 스크립트를 아직 못 불러왔어요. 잠시 후 다시 시도해주세요.'); return; }
 
+  try{
+    localStorage.setItem('diary_client_id', clientId);
+    localStorage.setItem('diary_account_hint', accountHint);
+  }catch(e){}
+
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: 'https://www.googleapis.com/auth/drive.file',
-    hint: accountHint || undefined,
+    login_hint: accountHint || undefined,
     callback: async (resp)=>{
       if(resp.error){ setDriveStatus('연결 실패: '+resp.error); return; }
       accessToken = resp.access_token;
@@ -644,7 +659,7 @@ function connectGoogleDrive(){
       document.getElementById('gconnect').textContent = '다시 불러오기';
     }
   });
-  tokenClient.requestAccessToken({prompt: accountHint ? '' : 'select_account'});
+  tokenClient.requestAccessToken({prompt: accountHint ? '' : 'select_account', login_hint: accountHint || undefined});
 }
 document.getElementById('gconnect').addEventListener('click', connectGoogleDrive);
 
