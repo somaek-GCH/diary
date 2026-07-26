@@ -159,6 +159,8 @@ body{
   cursor:pointer;font-size:13px;padding:0 2px;
 }
 
+.hidden{display:none;}
+
 .drive-section{
   background:var(--ink-2);
   border:1px solid var(--line);
@@ -388,7 +390,21 @@ textarea#editor::placeholder{color:var(--paper-dim);}
   font-size:11px;
   color:var(--paper-dim);
   margin-bottom:4px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
 }
+.entry-row .del-btn{
+  background:none;
+  border:1px solid var(--line);
+  color:var(--paper-dim);
+  border-radius:4px;
+  font-size:10px;
+  padding:1px 7px;
+  cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.entry-row .del-btn:hover{color:var(--rust);border-color:var(--rust);}
 .entry-row .p{
   font-size:14px;
   color:var(--paper);
@@ -433,10 +449,11 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <input type="date" id="view-date-input">
     <button class="nav-today-btn" id="nav-today-btn">오늘로</button>
     <span class="lunar-date" id="lunar-date"></span>
+    <button class="nav-today-btn" id="family-toggle-btn" style="margin-left:auto;">가족 생일 관리</button>
   </div>
   <div class="badge-row" id="badge-row"></div>
 
-  <div class="family-section">
+  <div class="family-section hidden" id="family-section">
     <div class="section-title" style="margin-bottom:12px;">가족 생일</div>
     <div class="family-form">
       <input type="text" name="fname" id="f-name" placeholder="이름">
@@ -453,12 +470,18 @@ textarea#editor::placeholder{color:var(--paper-dim);}
 
   <div class="drive-section">
     <div class="section-title" style="margin-bottom:12px;">Google Drive 동기화</div>
-    <div class="drive-row">
-      <input type="text" id="gclient-id" placeholder="Google OAuth 클라이언트 ID를 붙여넣으세요">
+    <div id="drive-inputs-wrap">
+      <div class="drive-row">
+        <input type="text" id="gclient-id" placeholder="Google OAuth 클라이언트 ID를 붙여넣으세요">
+      </div>
+      <div class="drive-row">
+        <input type="text" id="gaccount-hint" placeholder="동기화할 Google 계정 이메일 (예: me@gmail.com)">
+        <button class="drive-connect-btn" id="gconnect">Google 계정 연결</button>
+      </div>
     </div>
-    <div class="drive-row">
-      <input type="text" id="gaccount-hint" placeholder="동기화할 Google 계정 이메일 (예: me@gmail.com)">
-      <button class="drive-connect-btn" id="gconnect">Google 계정 연결</button>
+    <div class="drive-row hidden" id="drive-connected-controls">
+      <button class="nav-today-btn" id="gdrive-reload">다시 불러오기</button>
+      <button class="nav-today-btn" id="gdrive-reset">연결 해제</button>
     </div>
     <div class="drive-status" id="gstatus">연결 안 됨 · 기록은 지금 이 브라우저에만 있어요</div>
   </div>
@@ -474,6 +497,7 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <div class="entry-footer">
       <span class="byte-count" id="byte-count">0 bytes</span>
       <span class="weather-tag loading" id="weather-tag">날씨 확인 중...</span>
+      <button class="del-btn" id="delete-entry-btn" title="이 날짜 기록 삭제">삭제</button>
       <span class="save-msg" id="save-msg">저장됨</span>
       <button class="save-btn" id="save-btn">저장</button>
     </div>
@@ -597,6 +621,10 @@ function renderFamilyList(){
   });
 }
 
+document.getElementById('family-toggle-btn').addEventListener('click',()=>{
+  document.getElementById('family-section').classList.toggle('hidden');
+});
+
 document.getElementById('f-add').addEventListener('click',()=>{
   const name = document.getElementById('f-name').value.trim();
   const calType = document.getElementById('f-cal').value;
@@ -656,12 +684,34 @@ function connectGoogleDrive(){
       setDriveStatus('Drive에서 기록 불러오는 중...');
       await loadAllFromDrive();
       setDriveStatus('Google Drive 연결됨 · 저장할 때마다 자동 동기화', true);
-      document.getElementById('gconnect').textContent = '다시 불러오기';
+      document.getElementById('drive-inputs-wrap').classList.add('hidden');
+      document.getElementById('drive-connected-controls').classList.remove('hidden');
     }
   });
   tokenClient.requestAccessToken({prompt: accountHint ? '' : 'select_account', login_hint: accountHint || undefined});
 }
 document.getElementById('gconnect').addEventListener('click', connectGoogleDrive);
+
+document.getElementById('gdrive-reload').addEventListener('click', async ()=>{
+  if(!accessToken) return;
+  setDriveStatus('Drive에서 다시 불러오는 중...', true);
+  await loadAllFromDrive();
+  setDriveStatus('Google Drive 연결됨 · 방금 다시 불러옴', true);
+});
+
+document.getElementById('gdrive-reset').addEventListener('click', ()=>{
+  accessToken = null;
+  driveFolderId = null;
+  try{
+    localStorage.removeItem('diary_client_id');
+    localStorage.removeItem('diary_account_hint');
+  }catch(e){}
+  document.getElementById('gclient-id').value = '';
+  document.getElementById('gaccount-hint').value = '';
+  document.getElementById('drive-inputs-wrap').classList.remove('hidden');
+  document.getElementById('drive-connected-controls').classList.add('hidden');
+  setDriveStatus('연결 안 됨 · 기록은 지금 이 브라우저에만 있어요');
+});
 
 async function ensureDriveFolder(){
   const q = "mimeType='application/vnd.google-apps.folder' and name='기록장-데이터' and trashed=false";
@@ -846,6 +896,7 @@ function loadEntryForViewDate(){
   const isToday = dateKey(viewDate) === dateKey(today);
   const label = document.getElementById('editing-label');
   label.textContent = fmtDate(viewDate) + (isToday ? ' · 오늘' : '') + (existing ? ' 기록 편집 중' : ' 새 기록 작성');
+  document.getElementById('delete-entry-btn').style.display = existing ? '' : 'none';
 
   const tag = document.getElementById('weather-tag');
   if(existing && existing.weather){
@@ -931,12 +982,20 @@ function renderTimeline(filter){
       row.className='entry-row';
       const firstLine = e.content.split('\n')[0];
       row.innerHTML =
-        '<div class="d">'+fmtDate(e.date)+(e.weather ? '<span class="w">'+e.weather+'</span>' : '')+'</div>'+
+        '<div class="d"><span></span><button class="del-btn" title="삭제">삭제</button></div>'+
         '<div class="p"></div>'+
         '<div class="full"></div>';
+      row.querySelector('.d span').textContent = fmtDate(e.date)+(e.weather ? ' · '+e.weather : '');
       row.querySelector('.p').textContent = firstLine;
       row.querySelector('.full').textContent = e.content;
-      row.addEventListener('click',()=>row.classList.toggle('open'));
+      row.addEventListener('click',(evt)=>{
+        if(evt.target.classList.contains('del-btn')) return;
+        row.classList.toggle('open');
+      });
+      row.querySelector('.del-btn').addEventListener('click',(evt)=>{
+        evt.stopPropagation();
+        deleteEntry(e);
+      });
       // 더블클릭하면 그 날짜로 바로 이동해서 편집할 수 있다.
       row.addEventListener('dblclick',()=>{
         viewDate = new Date(e.date);
@@ -972,6 +1031,37 @@ function updateByteCount(){
   document.getElementById('byte-count').textContent = byteLen(editor.value)+' bytes';
 }
 document.getElementById('editor').addEventListener('input', updateByteCount);
+
+async function deleteEntry(entry){
+  const ok = confirm(fmtDate(entry.date)+' 기록을 삭제할까요? 이 작업은 되돌릴 수 없습니다.');
+  if(!ok) return;
+
+  const idx = entries.indexOf(entry);
+  if(idx > -1) entries.splice(idx, 1);
+
+  if(entry.driveFileId && accessToken){
+    try{
+      await fetch('https://www.googleapis.com/drive/v3/files/'+entry.driveFileId, {
+        method:'PATCH',
+        headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'application/json'},
+        body: JSON.stringify({trashed:true})
+      });
+    }catch(e){}
+  }
+
+  renderStats();
+  renderTimeline(document.getElementById('search').value);
+  renderSameDay();
+  if(dateKey(viewDate) === dateKey(entry.date)){
+    loadEntryForViewDate();
+  }
+}
+
+document.getElementById('delete-entry-btn').addEventListener('click', ()=>{
+  const existing = findEntry(viewDate);
+  if(!existing){ return; }
+  deleteEntry(existing);
+});
 
 function saveEntry(){
   const editor = document.getElementById('editor');
