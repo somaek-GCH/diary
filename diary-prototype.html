@@ -449,7 +449,8 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <input type="date" id="view-date-input">
     <button class="nav-today-btn" id="nav-today-btn">오늘로</button>
     <span class="lunar-date" id="lunar-date"></span>
-    <button class="nav-today-btn" id="family-toggle-btn" style="margin-left:auto;">가족 생일 관리</button>
+    <button class="nav-today-btn" id="family-toggle-btn" style="margin-left:auto;">기념일 관리</button>
+    <button class="nav-today-btn" id="drive-toggle-btn">동기화</button>
   </div>
   <div class="badge-row" id="badge-row"></div>
 
@@ -468,7 +469,7 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <div class="family-list" id="family-list"></div>
   </div>
 
-  <div class="drive-section">
+  <div class="drive-section hidden" id="drive-section">
     <div class="section-title" style="margin-bottom:12px;">Google Drive 동기화</div>
     <div id="drive-inputs-wrap">
       <div class="drive-row">
@@ -623,6 +624,10 @@ function renderFamilyList(){
 
 document.getElementById('family-toggle-btn').addEventListener('click',()=>{
   document.getElementById('family-section').classList.toggle('hidden');
+});
+
+document.getElementById('drive-toggle-btn').addEventListener('click',()=>{
+  document.getElementById('drive-section').classList.toggle('hidden');
 });
 
 document.getElementById('f-add').addEventListener('click',()=>{
