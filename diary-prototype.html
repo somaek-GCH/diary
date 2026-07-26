@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>기록장</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181f">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root{
+  --ink:#14181f;
+  --ink-2:#1c2230;
+  --ink-3:#252c3c;
+  --paper:#e9e3d3;
+  --paper-dim:#8c8779;
+  --brass:#c39a5f;
+  --brass-dim:#8a6c3f;
+  --moss:#7ea27f;
+  --rust:#a56b58;
+  --line:#333c4f;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--paper);
+  font-family:'Noto Sans KR',sans-serif;
+  min-height:100vh;
+}
+.wrap{
+  max-width:640px;
+  margin:0 auto;
+  padding:48px 24px 96px;
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:36px;
+  border-bottom:1px solid var(--line);
+  padding-bottom:20px;
+}
+.header h1{
+  font-family:'Noto Serif KR',serif;
+  font-weight:700;
+  font-size:26px;
+  margin:0;
+  letter-spacing:-0.5px;
+}
+.header .date{
+  font-family:'JetBrains Mono',monospace;
+  font-size:13px;
+  color:var(--paper-dim);
+  text-align:right;
+}
+.nav-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.nav-row input[type="date"]{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  color:var(--paper);
+  border-radius:6px;
+  padding:6px 10px;
+  font-size:12px;
+  font-family:'JetBrains Mono',monospace;
+}
+.nav-today-btn{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--paper-dim);
+  border-radius:6px;
+  padding:6px 12px;
+  font-size:12px;
+  cursor:pointer;
+}
+.nav-today-btn:hover{color:var(--paper);border-color:var(--paper-dim);}
+.editing-label{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--paper-dim);
+  margin-bottom:10px;
+}
+.lunar-date{
+  font-size:12px;
+  color:var(--brass-dim);
+  font-family:'JetBrains Mono',monospace;
+}
+.badge-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:14px 0 0;
+}
+.badge{
+  font-size:11px;
+  padding:4px 10px;
+  border-radius:20px;
+  background:var(--ink-3);
+  border:1px solid var(--brass-dim);
+  color:var(--brass);
+}
+.badge.holiday{background:var(--rust);border-color:var(--rust);color:var(--paper);}
+.badge.bday{background:var(--moss);border-color:var(--moss);color:var(--ink);}
+
+.family-section{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:18px 20px;
+  margin-bottom:40px;
+}
+.family-form{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.family-form input, .family-form select{
+  background:var(--ink);
+  border:1px solid var(--line);
+  color:var(--paper);
+  border-radius:6px;
+  padding:7px 10px;
+  font-size:12px;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.family-form input[name="fname"]{flex:1;min-width:100px;}
+.family-form input[type="number"]{width:56px;}
+.family-add-btn{
+  background:var(--moss);
+  color:var(--ink);
+  border:none;
+  border-radius:6px;
+  padding:7px 14px;
+  font-size:12px;
+  cursor:pointer;
+}
+.family-list{display:flex;gap:8px;flex-wrap:wrap;}
+.family-chip{
+  font-size:12px;
+  background:var(--ink-3);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:5px 8px 5px 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.family-chip button{
+  background:none;border:none;color:var(--paper-dim);
+  cursor:pointer;font-size:13px;padding:0 2px;
+}
+
+.drive-section{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:18px 20px;
+  margin-bottom:24px;
+}
+.drive-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-bottom:8px;
+}
+.drive-row input{
+  flex:1;
+  min-width:200px;
+  background:var(--ink);
+  border:1px solid var(--line);
+  color:var(--paper);
+  border-radius:6px;
+  padding:8px 10px;
+  font-size:12px;
+  font-family:'JetBrains Mono',monospace;
+}
+.drive-connect-btn{
+  background:var(--brass);
+  color:var(--ink);
+  border:none;
+  border-radius:6px;
+  padding:8px 16px;
+  font-size:12px;
+  font-weight:500;
+  cursor:pointer;
+}
+.drive-status{
+  font-size:12px;
+  color:var(--paper-dim);
+  font-family:'JetBrains Mono',monospace;
+}
+.drive-status.connected{color:var(--moss);}
+.hint{
+  font-size:11px;
+  color:var(--paper-dim);
+  margin-top:4px;
+}
+.hint kbd{
+  background:var(--ink-3);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:1px 6px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+}
+
+.entry-card{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:24px;
+  margin-bottom:40px;
+  background-image:repeating-linear-gradient(
+    var(--ink-2) 0px, var(--ink-2) 31px, var(--line) 32px
+  );
+  background-position: 0 62px;
+}
+.entry-card .prompts{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:16px;
+}
+.prompt-tag{
+  font-size:11px;
+  color:var(--ink);
+  background:var(--brass);
+  padding:4px 10px;
+  border-radius:20px;
+  cursor:pointer;
+  border:none;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.prompt-tag.moss{background:var(--moss);}
+.prompt-tag.rust{background:var(--rust);}
+textarea#editor{
+  width:100%;
+  min-height:180px;
+  background:transparent;
+  border:none;
+  color:var(--paper);
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;
+  line-height:32px;
+  resize:vertical;
+  outline:none;
+}
+textarea#editor::placeholder{color:var(--paper-dim);}
+.entry-footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:12px;
+  border-top:1px solid var(--line);
+  padding-top:14px;
+  gap:12px;
+}
+.weather-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--brass);
+  border:1px solid var(--brass-dim);
+  border-radius:20px;
+  padding:3px 10px;
+  white-space:nowrap;
+}
+.weather-tag.loading{color:var(--paper-dim);border-color:var(--line);}
+.entry-row .d .w{color:var(--brass-dim);margin-left:8px;}
+.byte-count{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--paper-dim);
+}
+.save-btn{
+  background:var(--brass);
+  color:var(--ink);
+  border:none;
+  padding:9px 20px;
+  border-radius:6px;
+  font-weight:500;
+  font-size:13px;
+  cursor:pointer;
+  font-family:'Noto Sans KR',sans-serif;
+}
+.save-btn:hover{background:#d4ab70;}
+.save-msg{
+  font-size:12px;
+  color:var(--moss);
+  opacity:0;
+  transition:opacity .3s;
+}
+.save-msg.show{opacity:1;}
+
+.section-title{
+  font-family:'Noto Serif KR',serif;
+  font-size:17px;
+  margin:0 0 4px;
+}
+.section-sub{
+  font-size:12px;
+  color:var(--paper-dim);
+  margin:0 0 18px;
+}
+
+.sameday-row{
+  display:flex;
+  gap:14px;
+  overflow-x:auto;
+  padding-bottom:12px;
+  margin-bottom:44px;
+}
+.sameday-card{
+  flex:0 0 200px;
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:16px;
+}
+.sameday-card .year{
+  font-family:'JetBrains Mono',monospace;
+  color:var(--brass);
+  font-size:13px;
+  margin-bottom:8px;
+}
+.sameday-card .txt{
+  font-size:13px;
+  color:var(--paper-dim);
+  line-height:1.6;
+  display:-webkit-box;
+  -webkit-line-clamp:5;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.sameday-empty{
+  flex:0 0 200px;
+  border:1px dashed var(--line);
+  border-radius:8px;
+  padding:16px;
+  font-size:12px;
+  color:var(--paper-dim);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.search-row{margin-bottom:24px;}
+#search{
+  width:100%;
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:11px 14px;
+  color:var(--paper);
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:13px;
+  outline:none;
+}
+#search::placeholder{color:var(--paper-dim);}
+
+.year-group{margin-bottom:28px;}
+.year-label{
+  font-family:'JetBrains Mono',monospace;
+  color:var(--brass-dim);
+  font-size:13px;
+  margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--line);
+}
+.entry-row{
+  padding:12px 0;
+  border-bottom:1px solid var(--line);
+  cursor:pointer;
+}
+.entry-row:last-child{border-bottom:none;}
+.entry-row .d{
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;
+  color:var(--paper-dim);
+  margin-bottom:4px;
+}
+.entry-row .p{
+  font-size:14px;
+  color:var(--paper);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.entry-row .full{
+  display:none;
+  font-size:13.5px;
+  color:var(--paper-dim);
+  line-height:1.7;
+  white-space:pre-wrap;
+  margin-top:8px;
+}
+.entry-row.open .full{display:block;}
+.entry-row.open .p{white-space:normal;}
+
+.stats-bar{
+  display:flex;
+  gap:20px;
+  margin:36px 0 44px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:12px;
+  color:var(--paper-dim);
+}
+.stats-bar b{color:var(--paper);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1>기록장</h1>
+      <div class="hint">키보드로 바로 쓰고 <kbd>Cmd/Ctrl</kbd>+<kbd>Enter</kbd>로 저장</div>
+    </div>
+    <div class="date" id="today-date"></div>
+  </div>
+
+  <div class="nav-row">
+    <input type="date" id="view-date-input">
+    <button class="nav-today-btn" id="nav-today-btn">오늘로</button>
+    <span class="lunar-date" id="lunar-date"></span>
+  </div>
+  <div class="badge-row" id="badge-row"></div>
+
+  <div class="family-section">
+    <div class="section-title" style="margin-bottom:12px;">가족 생일</div>
+    <div class="family-form">
+      <input type="text" name="fname" id="f-name" placeholder="이름">
+      <select id="f-cal">
+        <option value="solar">양력</option>
+        <option value="lunar">음력</option>
+      </select>
+      <input type="number" id="f-month" placeholder="월" min="1" max="12">
+      <input type="number" id="f-day" placeholder="일" min="1" max="30">
+      <button class="family-add-btn" id="f-add">추가</button>
+    </div>
+    <div class="family-list" id="family-list"></div>
+  </div>
+
+  <div class="drive-section">
+    <div class="section-title" style="margin-bottom:12px;">Google Drive 동기화</div>
+    <div class="drive-row">
+      <input type="text" id="gclient-id" placeholder="Google OAuth 클라이언트 ID를 붙여넣으세요">
+    </div>
+    <div class="drive-row">
+      <input type="text" id="gaccount-hint" placeholder="동기화할 Google 계정 이메일 (예: me@gmail.com)">
+      <button class="drive-connect-btn" id="gconnect">Google 계정 연결</button>
+    </div>
+    <div class="drive-status" id="gstatus">연결 안 됨 · 기록은 지금 이 브라우저에만 있어요</div>
+  </div>
+
+  <div class="entry-card">
+    <div class="editing-label" id="editing-label"></div>
+    <div class="prompts">
+      <button class="prompt-tag moss" data-t="오늘 잘한 것: ">오늘 잘한 것</button>
+      <button class="prompt-tag rust" data-t="아쉬운 것: ">아쉬운 것</button>
+      <button class="prompt-tag" data-t="내일의 다짐: ">내일의 다짐</button>
+    </div>
+    <textarea id="editor" placeholder="오늘 하루는 어땠나요..."></textarea>
+    <div class="entry-footer">
+      <span class="byte-count" id="byte-count">0 bytes</span>
+      <span class="weather-tag loading" id="weather-tag">날씨 확인 중...</span>
+      <span class="save-msg" id="save-msg">저장됨</span>
+      <button class="save-btn" id="save-btn">저장</button>
+    </div>
+  </div>
+
+  <div class="section-title">이 날, 지난 기록들</div>
+  <div class="section-sub">선택한 날짜와 같은 월/일에 남긴 과거의 기록입니다</div>
+  <div class="sameday-row" id="sameday-row"></div>
+
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="section-title">전체 기록</div>
+  <div class="section-sub">검색하거나 눌러서 펼쳐보세요</div>
+  <div class="search-row">
+    <input id="search" placeholder="키워드로 검색... (예: 산책, 프로젝트)">
+  </div>
+  <div id="timeline"></div>
+
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://unpkg.com/js-calendar-converter@0.0.7/dist/js-calendar-converter.js"></script>
+<script>
+function fmtDate(d){
+  const dt = new Date(d);
+  return dt.getFullYear()+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+String(dt.getDate()).padStart(2,'0');
+}
+function mmdd(d){
+  const dt = new Date(d);
+  return String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function byteLen(str){
+  return new TextEncoder().encode(str).length;
+}
+function dateKey(d){
+  const dt = new Date(d);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function shiftYear(d,n){const c=new Date(d);c.setFullYear(c.getFullYear()+n);return c;}
+function offsetDays(d,n){const c=new Date(d);c.setDate(c.getDate()+n);return c;}
+
+const today = new Date();
+document.getElementById('today-date').textContent =
+  today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일';
+
+// 지금 화면에서 보고/쓰고 있는 날짜. 기본은 오늘이지만, 날짜 이동으로 바뀔 수 있다.
+let viewDate = new Date(today);
+document.getElementById('view-date-input').value = dateKey(viewDate);
+
+// ── 음력 / 절기 / 명절 / 가족 생일
+const TERM_KO = {
+  '立春':'입춘','雨水':'우수','驚蟄':'경칩','春分':'춘분','清明':'청명','穀雨':'곡우',
+  '立夏':'입하','小滿':'소만','芒種':'망종','夏至':'하지','小暑':'소서','大暑':'대서',
+  '立秋':'입추','處暑':'처서','白露':'백로','秋分':'추분','寒露':'한로','霜降':'상강',
+  '立冬':'입동','小雪':'소설','大雪':'대설','冬至':'동지','小寒':'소한','大寒':'대한'
+};
+
+let family = [
+  {name:'어머니', calType:'lunar', month:3, day:12},
+  {name:'아버지', calType:'solar', month:9, day:2}
+];
+
+function lunarInfoFor(d){
+  try{
+    return calendar.solar2lunar(d.getFullYear(), d.getMonth()+1, d.getDate());
+  }catch(e){ return null; }
+}
+
+function renderLunarHeader(d){
+  const info = lunarInfoFor(d);
+  const lunarEl = document.getElementById('lunar-date');
+  if(!info){ lunarEl.textContent=''; return; }
+  lunarEl.textContent = '음력 '+info.lMonth+'월 '+info.lDay+'일'+(info.isLeap?' (윤달)':'');
+}
+
+function renderBadges(d){
+  const row = document.getElementById('badge-row');
+  row.innerHTML = '';
+  const info = lunarInfoFor(d);
+  if(!info) return;
+
+  if(info.isTerm && info.Term){
+    const b = document.createElement('span');
+    b.className='badge';
+    b.textContent = TERM_KO[info.Term] || info.Term;
+    row.appendChild(b);
+  }
+  if(info.lMonth===1 && info.lDay===1){
+    const b=document.createElement('span'); b.className='badge holiday'; b.textContent='설날'; row.appendChild(b);
+  }
+  if(info.lMonth===8 && info.lDay===15){
+    const b=document.createElement('span'); b.className='badge holiday'; b.textContent='추석'; row.appendChild(b);
+  }
+  family.forEach(f=>{
+    let match = false;
+    if(f.calType==='solar'){
+      match = (d.getMonth()+1===f.month && d.getDate()===f.day);
+    } else {
+      match = (info.lMonth===f.month && info.lDay===f.day);
+    }
+    if(match){
+      const b=document.createElement('span'); b.className='badge bday'; b.textContent=f.name+' 생일'; row.appendChild(b);
+    }
+  });
+}
+
+function renderFamilyList(){
+  const list = document.getElementById('family-list');
+  list.innerHTML='';
+  family.forEach((f,idx)=>{
+    const chip = document.createElement('div');
+    chip.className='family-chip';
+    chip.innerHTML = '<span></span><button aria-label="삭제">×</button>';
+    chip.querySelector('span').textContent = f.name+' · '+(f.calType==='solar'?'양력':'음력')+' '+f.month+'/'+f.day;
+    chip.querySelector('button').addEventListener('click',()=>{
+      family.splice(idx,1);
+      renderFamilyList();
+      renderBadges(viewDate);
+    });
+    list.appendChild(chip);
+  });
+}
+
+document.getElementById('f-add').addEventListener('click',()=>{
+  const name = document.getElementById('f-name').value.trim();
+  const calType = document.getElementById('f-cal').value;
+  const month = parseInt(document.getElementById('f-month').value,10);
+  const day = parseInt(document.getElementById('f-day').value,10);
+  if(!name || !month || !day) return;
+  family.push({name, calType, month, day});
+  document.getElementById('f-name').value='';
+  document.getElementById('f-month').value='';
+  document.getElementById('f-day').value='';
+  renderFamilyList();
+  renderBadges(viewDate);
+});
+
+// ── Google Drive 동기화
+// drive.file 스코프: 이 앱이 직접 만든 파일에만 접근 가능 (Drive의 다른 파일은 못 봄)
+let accessToken = null;
+let driveFolderId = null;
+let tokenClient = null;
+
+function setDriveStatus(text, connected){
+  const el = document.getElementById('gstatus');
+  el.textContent = text;
+  el.classList.toggle('connected', !!connected);
+}
+
+function connectGoogleDrive(){
+  const clientId = document.getElementById('gclient-id').value.trim();
+  const accountHint = document.getElementById('gaccount-hint').value.trim();
+  if(!clientId){ alert('먼저 Google OAuth 클라이언트 ID를 입력해주세요.'); return; }
+  if(typeof google === 'undefined'){ setDriveStatus('Google 로그인 스크립트를 아직 못 불러왔어요. 잠시 후 다시 시도해주세요.'); return; }
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    hint: accountHint || undefined,
+    callback: async (resp)=>{
+      if(resp.error){ setDriveStatus('연결 실패: '+resp.error); return; }
+      accessToken = resp.access_token;
+      setDriveStatus('폴더 준비 중...');
+      await ensureDriveFolder();
+      setDriveStatus('Drive에서 기록 불러오는 중...');
+      await loadAllFromDrive();
+      setDriveStatus('Google Drive 연결됨 · 저장할 때마다 자동 동기화', true);
+      document.getElementById('gconnect').textContent = '다시 불러오기';
+    }
+  });
+  tokenClient.requestAccessToken({prompt: accountHint ? '' : 'select_account'});
+}
+document.getElementById('gconnect').addEventListener('click', connectGoogleDrive);
+
+async function ensureDriveFolder(){
+  const q = "mimeType='application/vnd.google-apps.folder' and name='기록장-데이터' and trashed=false";
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q), {
+    headers: {Authorization: 'Bearer '+accessToken}
+  });
+  const data = await res.json();
+  if(data.files && data.files.length>0){
+    driveFolderId = data.files[0].id;
+  } else {
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method:'POST',
+      headers: {Authorization:'Bearer '+accessToken, 'Content-Type':'application/json'},
+      body: JSON.stringify({name:'기록장-데이터', mimeType:'application/vnd.google-apps.folder'})
+    });
+    const created = await createRes.json();
+    driveFolderId = created.id;
+  }
+}
+
+function entryToMarkdown(entry){
+  let fm = '---\ndate: '+dateKey(entry.date)+'\n';
+  if(entry.weather) fm += 'weather: '+entry.weather+'\n';
+  fm += '---\n';
+  return fm + entry.content;
+}
+
+function parseMarkdownEntry(text, filename, fileId){
+  let dkey = filename.replace(/\.md$/,'');
+  let weather = null;
+  let content = text;
+  const fmMatch = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if(fmMatch){
+    const fm = fmMatch[1];
+    const dateM = fm.match(/date:\s*(.+)/);
+    const weatherM = fm.match(/weather:\s*(.+)/);
+    if(dateM) dkey = dateM[1].trim();
+    if(weatherM) weather = weatherM[1].trim();
+    content = fmMatch[2];
+  }
+  const d = new Date(dkey+'T00:00:00');
+  if(isNaN(d)) return null;
+  return {date: d.toISOString(), content: content.trim(), weather, driveFileId: fileId};
+}
+
+async function loadAllFromDrive(){
+  const q = "'"+driveFolderId+"' in parents and trashed=false";
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)&pageSize=1000', {
+    headers:{Authorization:'Bearer '+accessToken}
+  });
+  const data = await res.json();
+  const loaded = [];
+  for(const f of (data.files||[])){
+    const contentRes = await fetch('https://www.googleapis.com/drive/v3/files/'+f.id+'?alt=media', {
+      headers:{Authorization:'Bearer '+accessToken}
+    });
+    const text = await contentRes.text();
+    const parsed = parseMarkdownEntry(text, f.name, f.id);
+    if(parsed) loaded.push(parsed);
+  }
+  if(loaded.length){
+    entries = loaded;
+    entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    renderStats();
+    renderTimeline(document.getElementById('search').value);
+    renderSameDay();
+  }
+}
+
+async function saveEntryToDrive(entry){
+  if(!accessToken || !driveFolderId) return; // 연결 전이면 로컬(브라우저 메모리)에만 저장됨
+  const filename = dateKey(entry.date)+'.md';
+  const content = entryToMarkdown(entry);
+  setDriveStatus('동기화 중...', true);
+
+  if(entry.driveFileId){
+    await fetch('https://www.googleapis.com/upload/drive/v3/files/'+entry.driveFileId+'?uploadType=media', {
+      method:'PATCH',
+      headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'text/markdown'},
+      body: content
+    });
+  } else {
+    const boundary = 'diary-boundary-'+Date.now();
+    const metadata = {name: filename, parents:[driveFolderId]};
+    const body =
+      '--'+boundary+'\r\n'+
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
+      JSON.stringify(metadata)+'\r\n'+
+      '--'+boundary+'\r\n'+
+      'Content-Type: text/markdown\r\n\r\n'+
+      content+'\r\n'+
+      '--'+boundary+'--';
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'multipart/related; boundary='+boundary},
+      body
+    });
+    const created = await res.json();
+    entry.driveFileId = created.id;
+  }
+  setDriveStatus('Google Drive 연결됨 · 방금 동기화됨', true);
+}
+
+// 데모용 시드 데이터 (Drive에 연결하면 이 데이터는 Drive의 실제 기록으로 교체됨)
+let entries = [
+  {date: shiftYear(today,-3).toISOString(), content:"오늘 잘한 것: 아침 일찍 일어나서 산책을 했다.\n아쉬운 것: 저녁에 계획했던 책을 못 읽었다.\n내일의 다짐: 자기 전에 폰을 덜 보기."},
+  {date: shiftYear(today,-2).toISOString(), content:"오늘 잘한 것: 미뤄뒀던 프로젝트 문서를 마무리했다.\n아쉬운 것: 점심을 너무 급하게 먹었다.\n내일의 다짐: 점심시간엔 여유를 갖기."},
+  {date: shiftYear(today,-1).toISOString(), content:"오늘 잘한 것: 오랜만에 친구랑 통화했다. 목소리 들으니 좋았다.\n아쉬운 것: 하루 종일 날씨가 흐려서 기분이 가라앉았다.\n내일의 다짐: 비가 와도 짧게라도 밖에 나가기."},
+  {date: offsetDays(today,-2).toISOString(), content:"회의가 길었지만 결론은 잘 났다. 팀원들이랑 저녁도 같이 먹었는데 오랜만에 웃었다."},
+  {date: offsetDays(today,-5).toISOString(), content:"오늘 잘한 것: 운동을 30분 했다.\n아쉬운 것: 계획한 만큼 집중이 안 됐다."},
+  {date: offsetDays(today,-9).toISOString(), content:"별일 없는 하루였지만, 별일 없다는 게 오히려 감사했다."},
+  {date: offsetDays(today,-40).toISOString(), content:"오늘 잘한 것: 미루던 병원 예약을 잡았다.\n내일의 다짐: 계속 미루지 않기."},
+  {date: offsetDays(today,-120).toISOString(), content:"이 일기장 앱을 만들어야겠다고 처음 생각한 날. 종이 다이어리처럼 몇 년치를 한눈에 보고 싶다는 생각이 계속 든다."},
+];
+entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+// ── 날씨: 하루에 한 번만 API를 호출하고, 이후엔 캐시된 값을 재사용한다.
+const weatherCache = {}; // { '2026-07-25': '맑음 18°C' }
+
+function weatherCodeToText(code, temp){
+  const map = {
+    0:'맑음', 1:'대체로 맑음', 2:'구름 조금', 3:'흐림',
+    45:'안개', 48:'서리 안개',
+    51:'약한 이슬비', 53:'이슬비', 55:'강한 이슬비',
+    61:'약한 비', 63:'비', 65:'강한 비',
+    71:'약한 눈', 73:'눈', 75:'강한 눈',
+    80:'소나기', 95:'뇌우'
+  };
+  const label = map[code] || '알 수 없음';
+  return label+' '+Math.round(temp)+'°C';
+}
+
+function fetchWeatherForToday(){
+  const key = dateKey(today);
+  const tag = document.getElementById('weather-tag');
+  if(dateKey(viewDate) !== key) return; // 오늘을 보고 있을 때만 호출
+
+  if(weatherCache[key]){
+    tag.textContent = weatherCache[key];
+    tag.classList.remove('loading');
+    return;
+  }
+  if(!navigator.geolocation){
+    tag.textContent = '위치 정보를 사용할 수 없음';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      try{
+        const {latitude, longitude} = pos.coords;
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude='+latitude+'&longitude='+longitude+'&current_weather=true'
+        );
+        const data = await res.json();
+        const text = weatherCodeToText(data.current_weather.weathercode, data.current_weather.temperature);
+        weatherCache[key] = text;
+        if(dateKey(viewDate)===key){ tag.textContent = text; tag.classList.remove('loading'); }
+      }catch(err){
+        tag.textContent = '날씨를 불러오지 못함';
+        tag.classList.remove('loading');
+      }
+    },
+    ()=>{
+      tag.textContent = '위치 권한이 필요함';
+      tag.classList.remove('loading');
+    }
+  );
+}
+
+function findEntry(d){
+  const key = dateKey(d);
+  return entries.find(e => dateKey(e.date) === key);
+}
+
+// 날짜 이동으로 선택된 날의 기록을 편집창에 불러온다.
+function loadEntryForViewDate(){
+  const editor = document.getElementById('editor');
+  const existing = findEntry(viewDate);
+  editor.value = existing ? existing.content : '';
+  updateByteCount();
+
+  const isToday = dateKey(viewDate) === dateKey(today);
+  const label = document.getElementById('editing-label');
+  label.textContent = fmtDate(viewDate) + (isToday ? ' · 오늘' : '') + (existing ? ' 기록 편집 중' : ' 새 기록 작성');
+
+  const tag = document.getElementById('weather-tag');
+  if(existing && existing.weather){
+    tag.textContent = existing.weather;
+    tag.classList.remove('loading');
+  } else if(isToday){
+    tag.classList.add('loading');
+    tag.textContent = '날씨 확인 중...';
+    fetchWeatherForToday();
+  } else {
+    tag.textContent = '날씨 기록 없음';
+    tag.classList.remove('loading');
+  }
+
+  renderLunarHeader(viewDate);
+  renderBadges(viewDate);
+  renderSameDay();
+}
+
+document.getElementById('view-date-input').addEventListener('change',(e)=>{
+  if(!e.target.value) return;
+  const [y,m,dd] = e.target.value.split('-').map(Number);
+  viewDate = new Date(y, m-1, dd);
+  loadEntryForViewDate();
+});
+document.getElementById('nav-today-btn').addEventListener('click',()=>{
+  viewDate = new Date(today);
+  document.getElementById('view-date-input').value = dateKey(viewDate);
+  loadEntryForViewDate();
+});
+
+function renderSameDay(){
+  const row = document.getElementById('sameday-row');
+  row.innerHTML='';
+  const viewMMDD = mmdd(viewDate);
+  const matches = entries.filter(e => mmdd(e.date)===viewMMDD && dateKey(e.date)!==dateKey(viewDate));
+  if(matches.length===0){
+    row.innerHTML = '<div class="sameday-empty">아직 이 날짜의<br>과거 기록이 없어요</div>';
+    return;
+  }
+  matches.forEach(e=>{
+    const y = new Date(e.date).getFullYear();
+    const div = document.createElement('div');
+    div.className='sameday-card';
+    div.innerHTML = '<div class="year">'+y+'년</div><div class="txt"></div>';
+    div.querySelector('.txt').textContent = e.content;
+    row.appendChild(div);
+  });
+}
+
+function renderStats(){
+  const bar = document.getElementById('stats-bar');
+  const totalBytes = entries.reduce((s,e)=>s+byteLen(e.content),0);
+  const years = new Set(entries.map(e=>new Date(e.date).getFullYear())).size;
+  bar.innerHTML =
+    '<span><b>'+entries.length+'</b>개의 기록</span>'+
+    '<span><b>'+years+'</b>개 연도</span>'+
+    '<span>총 <b>'+(totalBytes/1024).toFixed(1)+' KB</b></span>';
+}
+
+function renderTimeline(filter){
+  const timeline = document.getElementById('timeline');
+  timeline.innerHTML='';
+  const f = (filter||'').trim().toLowerCase();
+  const filtered = entries.filter(e=>!f || e.content.toLowerCase().includes(f));
+
+  const byYear = {};
+  filtered.forEach(e=>{
+    const y = new Date(e.date).getFullYear();
+    (byYear[y] = byYear[y]||[]).push(e);
+  });
+
+  Object.keys(byYear).sort((a,b)=>b-a).forEach(y=>{
+    const group = document.createElement('div');
+    group.className='year-group';
+    const label = document.createElement('div');
+    label.className='year-label';
+    label.textContent = y+'년 · '+byYear[y].length+'개';
+    group.appendChild(label);
+
+    byYear[y].forEach(e=>{
+      const row = document.createElement('div');
+      row.className='entry-row';
+      const firstLine = e.content.split('\n')[0];
+      row.innerHTML =
+        '<div class="d">'+fmtDate(e.date)+(e.weather ? '<span class="w">'+e.weather+'</span>' : '')+'</div>'+
+        '<div class="p"></div>'+
+        '<div class="full"></div>';
+      row.querySelector('.p').textContent = firstLine;
+      row.querySelector('.full').textContent = e.content;
+      row.addEventListener('click',()=>row.classList.toggle('open'));
+      // 더블클릭하면 그 날짜로 바로 이동해서 편집할 수 있다.
+      row.addEventListener('dblclick',()=>{
+        viewDate = new Date(e.date);
+        document.getElementById('view-date-input').value = dateKey(viewDate);
+        loadEntryForViewDate();
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+      group.appendChild(row);
+    });
+    timeline.appendChild(group);
+  });
+
+  if(filtered.length===0){
+    timeline.innerHTML = '<div class="section-sub" style="margin-top:12px;">일치하는 기록이 없어요.</div>';
+  }
+}
+
+document.getElementById('search').addEventListener('input',(e)=>{
+  renderTimeline(e.target.value);
+});
+
+document.querySelectorAll('.prompt-tag').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const editor = document.getElementById('editor');
+    editor.value += (editor.value && !editor.value.endsWith('\n') ? '\n' : '') + btn.dataset.t;
+    editor.focus();
+    updateByteCount();
+  });
+});
+
+function updateByteCount(){
+  const editor = document.getElementById('editor');
+  document.getElementById('byte-count').textContent = byteLen(editor.value)+' bytes';
+}
+document.getElementById('editor').addEventListener('input', updateByteCount);
+
+function saveEntry(){
+  const editor = document.getElementById('editor');
+  if(!editor.value.trim()) return;
+
+  const existing = findEntry(viewDate);
+  const weather = (existing && existing.weather) || weatherCache[dateKey(viewDate)] || null;
+  let target;
+
+  if(existing){
+    existing.content = editor.value;
+    existing.weather = weather;
+    target = existing;
+  } else {
+    target = {date: viewDate.toISOString(), content: editor.value, weather};
+    entries.unshift(target);
+  }
+  entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  updateByteCount();
+  renderSameDay();
+  renderStats();
+  renderTimeline(document.getElementById('search').value);
+  loadEntryForViewDate();
+  const msg = document.getElementById('save-msg');
+  msg.classList.add('show');
+  setTimeout(()=>msg.classList.remove('show'),1500);
+
+  saveEntryToDrive(target);
+}
+
+document.getElementById('save-btn').addEventListener('click', saveEntry);
+document.getElementById('editor').addEventListener('keydown',(e)=>{
+  if((e.metaKey||e.ctrlKey) && e.key==='Enter'){
+    e.preventDefault();
+    saveEntry();
+  }
+});
+
+renderStats();
+renderTimeline('');
+loadEntryForViewDate();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
