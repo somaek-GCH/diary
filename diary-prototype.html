@@ -537,8 +537,6 @@ function dateKey(d){
   const dt = new Date(d);
   return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
 }
-function shiftYear(d,n){const c=new Date(d);c.setFullYear(c.getFullYear()+n);return c;}
-function offsetDays(d,n){const c=new Date(d);c.setDate(c.getDate()+n);return c;}
 
 const today = new Date();
 document.getElementById('today-date').textContent =
@@ -556,10 +554,7 @@ const TERM_KO = {
   '立冬':'입동','小雪':'소설','大雪':'대설','冬至':'동지','小寒':'소한','大寒':'대한'
 };
 
-let family = [
-  {name:'어머니', calType:'lunar', month:3, day:12},
-  {name:'아버지', calType:'solar', month:9, day:2}
-];
+let family = [];
 
 function lunarInfoFor(d){
   try{
@@ -820,17 +815,8 @@ async function saveEntryToDrive(entry){
   setDriveStatus('Google Drive 연결됨 · 방금 동기화됨', true);
 }
 
-// 데모용 시드 데이터 (Drive에 연결하면 이 데이터는 Drive의 실제 기록으로 교체됨)
-let entries = [
-  {date: shiftYear(today,-3).toISOString(), content:"오늘 잘한 것: 아침 일찍 일어나서 산책을 했다.\n아쉬운 것: 저녁에 계획했던 책을 못 읽었다.\n내일의 다짐: 자기 전에 폰을 덜 보기."},
-  {date: shiftYear(today,-2).toISOString(), content:"오늘 잘한 것: 미뤄뒀던 프로젝트 문서를 마무리했다.\n아쉬운 것: 점심을 너무 급하게 먹었다.\n내일의 다짐: 점심시간엔 여유를 갖기."},
-  {date: shiftYear(today,-1).toISOString(), content:"오늘 잘한 것: 오랜만에 친구랑 통화했다. 목소리 들으니 좋았다.\n아쉬운 것: 하루 종일 날씨가 흐려서 기분이 가라앉았다.\n내일의 다짐: 비가 와도 짧게라도 밖에 나가기."},
-  {date: offsetDays(today,-2).toISOString(), content:"회의가 길었지만 결론은 잘 났다. 팀원들이랑 저녁도 같이 먹었는데 오랜만에 웃었다."},
-  {date: offsetDays(today,-5).toISOString(), content:"오늘 잘한 것: 운동을 30분 했다.\n아쉬운 것: 계획한 만큼 집중이 안 됐다."},
-  {date: offsetDays(today,-9).toISOString(), content:"별일 없는 하루였지만, 별일 없다는 게 오히려 감사했다."},
-  {date: offsetDays(today,-40).toISOString(), content:"오늘 잘한 것: 미루던 병원 예약을 잡았다.\n내일의 다짐: 계속 미루지 않기."},
-  {date: offsetDays(today,-120).toISOString(), content:"이 일기장 앱을 만들어야겠다고 처음 생각한 날. 종이 다이어리처럼 몇 년치를 한눈에 보고 싶다는 생각이 계속 든다."},
-];
+// 실제 사용 시에는 Drive에 저장된 기록이 여기로 불러와진다.
+let entries = [];
 entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
 
 // ── 날씨: 하루에 한 번만 API를 호출하고, 이후엔 캐시된 값을 재사용한다.
