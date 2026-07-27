@@ -258,7 +258,56 @@ textarea#editor{
   outline:none;
 }
 textarea#editor::placeholder{color:var(--paper-dim);}
-.entry-footer{
+.photo-strip{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:10px 0 4px;
+}
+.photo-thumb{
+  position:relative;
+  width:64px;
+  height:64px;
+  border-radius:6px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:var(--ink-3);
+}
+.photo-thumb img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.photo-thumb .rm{
+  position:absolute;
+  top:2px;
+  right:2px;
+  background:rgba(0,0,0,.6);
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  width:18px;
+  height:18px;
+  font-size:11px;
+  line-height:1;
+  cursor:pointer;
+}
+.photo-add-btn{
+  width:64px;
+  height:64px;
+  border-radius:6px;
+  border:1px dashed var(--line);
+  background:none;
+  color:var(--paper-dim);
+  font-size:20px;
+  cursor:pointer;
+}
+.photo-icon{
+  font-size:10px;
+  color:var(--brass-dim);
+  margin-left:6px;
+}
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -495,6 +544,10 @@ textarea#editor::placeholder{color:var(--paper-dim);}
       <button class="prompt-tag" data-t="내일의 다짐: ">내일의 다짐</button>
     </div>
     <textarea id="editor" placeholder="오늘 하루는 어땠나요..."></textarea>
+    <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
+    <div class="photo-strip" id="photo-strip">
+      <button class="photo-add-btn" id="photo-add-btn" title="사진 추가">+</button>
+    </div>
     <div class="entry-footer">
       <span class="byte-count" id="byte-count">0 bytes</span>
       <span class="weather-tag loading" id="weather-tag">날씨 확인 중...</span>
@@ -555,6 +608,56 @@ const TERM_KO = {
 };
 
 let family = [];
+let familyFileId = null;
+
+async function loadFamilyFromDrive(){
+  if(!accessToken || !driveFolderId) return;
+  const q = "'"+driveFolderId+"' in parents and name='기념일-데이터.json' and trashed=false";
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)', {
+    headers:{Authorization:'Bearer '+accessToken}
+  });
+  const data = await res.json();
+  if(data.files && data.files.length>0){
+    familyFileId = data.files[0].id;
+    try{
+      const contentRes = await fetch('https://www.googleapis.com/drive/v3/files/'+familyFileId+'?alt=media', {
+        headers:{Authorization:'Bearer '+accessToken}
+      });
+      const parsed = await contentRes.json();
+      if(Array.isArray(parsed)) family = parsed;
+    }catch(e){}
+  }
+}
+
+async function saveFamilyToDrive(){
+  if(!accessToken || !driveFolderId) return; // 연결 전이면 저장 안 됨(이 브라우저에서만 유지)
+  const content = JSON.stringify(family);
+  if(familyFileId){
+    await fetch('https://www.googleapis.com/upload/drive/v3/files/'+familyFileId+'?uploadType=media', {
+      method:'PATCH',
+      headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'application/json'},
+      body: content
+    });
+  } else {
+    const boundary = 'diary-family-'+Date.now();
+    const metadata = {name:'기념일-데이터.json', parents:[driveFolderId]};
+    const body =
+      '--'+boundary+'\r\n'+
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
+      JSON.stringify(metadata)+'\r\n'+
+      '--'+boundary+'\r\n'+
+      'Content-Type: application/json\r\n\r\n'+
+      content+'\r\n'+
+      '--'+boundary+'--';
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method:'POST',
+      headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'multipart/related; boundary='+boundary},
+      body
+    });
+    const created = await res.json();
+    familyFileId = created.id;
+  }
+}
 
 function lunarInfoFor(d){
   try{
@@ -612,6 +715,7 @@ function renderFamilyList(){
       family.splice(idx,1);
       renderFamilyList();
       renderBadges(viewDate);
+      saveFamilyToDrive();
     });
     list.appendChild(chip);
   });
@@ -637,6 +741,7 @@ document.getElementById('f-add').addEventListener('click',()=>{
   document.getElementById('f-day').value='';
   renderFamilyList();
   renderBadges(viewDate);
+  saveFamilyToDrive();
 });
 
 // ── Google Drive 동기화
@@ -683,6 +788,9 @@ function connectGoogleDrive(){
       await ensureDriveFolder();
       setDriveStatus('Drive에서 기록 불러오는 중...');
       await loadAllFromDrive();
+      await loadFamilyFromDrive();
+      renderFamilyList();
+      renderBadges(viewDate);
       setDriveStatus('Google Drive 연결됨 · 저장할 때마다 자동 동기화', true);
       document.getElementById('drive-inputs-wrap').classList.add('hidden');
       document.getElementById('drive-connected-controls').classList.remove('hidden');
@@ -696,12 +804,16 @@ document.getElementById('gdrive-reload').addEventListener('click', async ()=>{
   if(!accessToken) return;
   setDriveStatus('Drive에서 다시 불러오는 중...', true);
   await loadAllFromDrive();
+  await loadFamilyFromDrive();
+  renderFamilyList();
+  renderBadges(viewDate);
   setDriveStatus('Google Drive 연결됨 · 방금 다시 불러옴', true);
 });
 
 document.getElementById('gdrive-reset').addEventListener('click', ()=>{
   accessToken = null;
   driveFolderId = null;
+  familyFileId = null;
   try{
     localStorage.removeItem('diary_client_id');
     localStorage.removeItem('diary_account_hint');
@@ -735,6 +847,8 @@ async function ensureDriveFolder(){
 function entryToMarkdown(entry){
   let fm = '---\ndate: '+dateKey(entry.date)+'\n';
   if(entry.weather) fm += 'weather: '+entry.weather+'\n';
+  const photoIds = (entry.photos||[]).filter(p=>p.driveFileId).map(p=>p.driveFileId);
+  if(photoIds.length) fm += 'photos: '+photoIds.join(',')+'\n';
   fm += '---\n';
   return fm + entry.content;
 }
@@ -742,19 +856,22 @@ function entryToMarkdown(entry){
 function parseMarkdownEntry(text, filename, fileId){
   let dkey = filename.replace(/\.md$/,'');
   let weather = null;
+  let photos = [];
   let content = text;
   const fmMatch = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if(fmMatch){
     const fm = fmMatch[1];
     const dateM = fm.match(/date:\s*(.+)/);
     const weatherM = fm.match(/weather:\s*(.+)/);
+    const photosM = fm.match(/photos:\s*(.+)/);
     if(dateM) dkey = dateM[1].trim();
     if(weatherM) weather = weatherM[1].trim();
+    if(photosM) photos = photosM[1].trim().split(',').filter(Boolean).map(id=>({driveFileId:id}));
     content = fmMatch[2];
   }
   const d = new Date(dkey+'T00:00:00');
   if(isNaN(d)) return null;
-  return {date: d.toISOString(), content: content.trim(), weather, driveFileId: fileId};
+  return {date: d.toISOString(), content: content.trim(), weather, photos, driveFileId: fileId};
 }
 
 async function loadAllFromDrive(){
@@ -814,6 +931,98 @@ async function saveEntryToDrive(entry){
   }
   setDriveStatus('Google Drive 연결됨 · 방금 동기화됨', true);
 }
+
+// ── 사진 첨부
+let pendingPhotoFiles = []; // 아직 저장 안 한, 새로 고른 사진 파일들
+
+async function uploadPhotoToDrive(file){
+  const boundary = 'diary-photo-'+Date.now()+Math.random().toString(36).slice(2);
+  const metadata = {name: dateKey(viewDate)+'-'+file.name, parents:[driveFolderId]};
+  const metadataPart = '--'+boundary+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(metadata)+'\r\n';
+  const contentTypePart = '--'+boundary+'\r\nContent-Type: '+(file.type||'image/jpeg')+'\r\n\r\n';
+  const closeDelim = '\r\n--'+boundary+'--';
+  const body = new Blob([metadataPart, contentTypePart, file, closeDelim]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST',
+    headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'multipart/related; boundary='+boundary},
+    body
+  });
+  const data = await res.json();
+  return data.id;
+}
+
+async function resolvePhotoUrl(photo){
+  if(photo.url) return photo.url;
+  if(photo.dataUrl){ photo.url = photo.dataUrl; return photo.url; }
+  if(photo.driveFileId && accessToken){
+    try{
+      const res = await fetch('https://www.googleapis.com/drive/v3/files/'+photo.driveFileId+'?alt=media', {
+        headers:{Authorization:'Bearer '+accessToken}
+      });
+      const blob = await res.blob();
+      photo.url = URL.createObjectURL(blob);
+      return photo.url;
+    }catch(e){ return null; }
+  }
+  return null;
+}
+
+async function renderPhotoStrip(){
+  const strip = document.getElementById('photo-strip');
+  strip.querySelectorAll('.photo-thumb').forEach(el=>el.remove());
+  const existing = findEntry(viewDate);
+  const savedPhotos = (existing && existing.photos) || [];
+
+  for(const p of savedPhotos){
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.innerHTML = '<button class="rm">×</button>';
+    strip.insertBefore(thumb, document.getElementById('photo-add-btn'));
+    resolvePhotoUrl(p).then(url=>{
+      if(url){ const img=document.createElement('img'); img.src=url; thumb.prepend(img); }
+    });
+    thumb.querySelector('.rm').addEventListener('click', async ()=>{
+      if(p.driveFileId && accessToken){
+        try{
+          await fetch('https://www.googleapis.com/drive/v3/files/'+p.driveFileId, {
+            method:'PATCH',
+            headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'application/json'},
+            body: JSON.stringify({trashed:true})
+          });
+        }catch(e){}
+      }
+      const idx = existing.photos.indexOf(p);
+      if(idx>-1) existing.photos.splice(idx,1);
+      saveEntryToDrive(existing);
+      renderPhotoStrip();
+    });
+  }
+
+  pendingPhotoFiles.forEach((file, idx)=>{
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    thumb.appendChild(img);
+    const rm = document.createElement('button');
+    rm.className='rm'; rm.textContent='×';
+    rm.addEventListener('click', ()=>{
+      pendingPhotoFiles.splice(idx,1);
+      renderPhotoStrip();
+    });
+    thumb.appendChild(rm);
+    strip.insertBefore(thumb, document.getElementById('photo-add-btn'));
+  });
+}
+
+document.getElementById('photo-add-btn').addEventListener('click', ()=>{
+  document.getElementById('photo-input').click();
+});
+document.getElementById('photo-input').addEventListener('change', (e)=>{
+  pendingPhotoFiles.push(...Array.from(e.target.files));
+  e.target.value = '';
+  renderPhotoStrip();
+});
 
 // 실제 사용 시에는 Drive에 저장된 기록이 여기로 불러와진다.
 let entries = [];
@@ -905,6 +1114,8 @@ function loadEntryForViewDate(){
   renderLunarHeader(viewDate);
   renderBadges(viewDate);
   renderSameDay();
+  pendingPhotoFiles = [];
+  renderPhotoStrip();
 }
 
 document.getElementById('view-date-input').addEventListener('change',(e)=>{
@@ -1054,7 +1265,7 @@ document.getElementById('delete-entry-btn').addEventListener('click', ()=>{
   deleteEntry(existing);
 });
 
-function saveEntry(){
+async function saveEntry(){
   const editor = document.getElementById('editor');
   if(!editor.value.trim()) return;
 
@@ -1067,10 +1278,29 @@ function saveEntry(){
     existing.weather = weather;
     target = existing;
   } else {
-    target = {date: viewDate.toISOString(), content: editor.value, weather};
+    target = {date: viewDate.toISOString(), content: editor.value, weather, photos: []};
     entries.unshift(target);
   }
+  if(!target.photos) target.photos = [];
   entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  // 새로 첨부한 사진 처리: 연결되어 있으면 Drive에 업로드, 아니면 이 브라우저 세션에만 보관
+  for(const file of pendingPhotoFiles){
+    if(accessToken && driveFolderId){
+      try{
+        const id = await uploadPhotoToDrive(file);
+        target.photos.push({driveFileId:id});
+      }catch(e){}
+    } else {
+      const dataUrl = await new Promise(res=>{
+        const reader = new FileReader();
+        reader.onload = ()=>res(reader.result);
+        reader.readAsDataURL(file);
+      });
+      target.photos.push({dataUrl});
+    }
+  }
+  pendingPhotoFiles = [];
 
   updateByteCount();
   renderSameDay();
