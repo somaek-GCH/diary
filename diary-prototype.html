@@ -281,6 +281,8 @@ body{
   background:var(--ink-2);
 }
 .entry-row .mood{margin-right:6px;}
+
+.entry-card{
   background:var(--ink-2);
   border:1px solid var(--line);
   border-radius:10px;
@@ -372,6 +374,7 @@ textarea#editor::placeholder{color:var(--paper-dim);}
   color:var(--brass-dim);
   margin-left:6px;
 }
+.entry-footer{
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -508,6 +511,7 @@ textarea#editor::placeholder{color:var(--paper-dim);}
   justify-content:space-between;
 }
 .entry-row .del-btn{
+  margin-left:6px;
   background:none;
   border:1px solid var(--line);
   color:var(--paper-dim);
@@ -1346,7 +1350,7 @@ function renderTimeline(filter){
       row.className='entry-row';
       const firstLine = e.content.split('\n')[0];
       row.innerHTML =
-        '<div class="d"><span></span><button class="del-btn" title="삭제">삭제</button></div>'+
+        '<div class="d"><span></span><span><button class="del-btn edit-btn-inline" title="수정">수정</button><button class="del-btn" title="삭제">삭제</button></span></div>'+
         '<div class="p"></div>'+
         '<div class="full"></div>';
       row.querySelector('.d span').textContent = (e.mood ? e.mood+' ' : '')+fmtDate(e.date)+(e.weather ? ' · '+e.weather : '');
@@ -1356,17 +1360,22 @@ function renderTimeline(filter){
         if(evt.target.classList.contains('del-btn')) return;
         row.classList.toggle('open');
       });
-      row.querySelector('.del-btn').addEventListener('click',(evt)=>{
+      row.querySelector('.del-btn:not(.edit-btn-inline)').addEventListener('click',(evt)=>{
         evt.stopPropagation();
         deleteEntry(e);
       });
-      // 더블클릭하면 그 날짜로 바로 이동해서 편집할 수 있다.
-      row.addEventListener('dblclick',()=>{
+      function jumpToEdit(){
         viewDate = new Date(e.date);
         document.getElementById('view-date-input').value = dateKey(viewDate);
         loadEntryForViewDate();
         window.scrollTo({top:0, behavior:'smooth'});
+      }
+      row.querySelector('.edit-btn-inline').addEventListener('click',(evt)=>{
+        evt.stopPropagation();
+        jumpToEdit();
       });
+      // 더블클릭해도 동일하게 편집 화면으로 이동
+      row.addEventListener('dblclick', jumpToEdit);
       group.appendChild(row);
     });
     timeline.appendChild(group);
