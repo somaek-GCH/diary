@@ -1266,8 +1266,12 @@ document.getElementById('delete-entry-btn').addEventListener('click', ()=>{
 });
 
 async function saveEntry(){
+  const saveBtn = document.getElementById('save-btn');
+  if(saveBtn.disabled) return; // 저장 진행 중이면 연타 무시
   const editor = document.getElementById('editor');
   if(!editor.value.trim()) return;
+
+  saveBtn.disabled = true;
 
   const existing = findEntry(viewDate);
   const weather = (existing && existing.weather) || weatherCache[dateKey(viewDate)] || null;
@@ -1302,6 +1306,12 @@ async function saveEntry(){
   }
   pendingPhotoFiles = [];
 
+  try{
+    await saveEntryToDrive(target); // Drive 저장이 끝날 때까지 기다린 뒤에야 버튼이 다시 눌린다
+  }finally{
+    saveBtn.disabled = false;
+  }
+
   updateByteCount();
   renderSameDay();
   renderStats();
@@ -1310,8 +1320,6 @@ async function saveEntry(){
   const msg = document.getElementById('save-msg');
   msg.classList.add('show');
   setTimeout(()=>msg.classList.remove('show'),1500);
-
-  saveEntryToDrive(target);
 }
 
 document.getElementById('save-btn').addEventListener('click', saveEntry);
