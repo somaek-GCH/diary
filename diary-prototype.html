@@ -161,6 +161,50 @@ body{
 
 .hidden{display:none;}
 
+.lock-overlay{
+  position:fixed;
+  inset:0;
+  background:var(--ink);
+  z-index:1000;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+}
+.lock-overlay.hidden{display:none;}
+.lock-overlay h2{
+  font-family:'Noto Serif KR',serif;
+  font-size:22px;
+  margin:0;
+}
+.lock-overlay input{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  color:var(--paper);
+  border-radius:8px;
+  padding:12px 16px;
+  font-size:20px;
+  letter-spacing:8px;
+  text-align:center;
+  width:180px;
+  font-family:'JetBrains Mono',monospace;
+}
+.lock-overlay button{
+  background:var(--brass);
+  color:var(--ink);
+  border:none;
+  border-radius:6px;
+  padding:10px 24px;
+  font-size:13px;
+  cursor:pointer;
+}
+.lock-overlay .lock-msg{
+  font-size:12px;
+  color:var(--rust);
+  min-height:16px;
+}
+
 .drive-section{
   background:var(--ink-2);
   border:1px solid var(--line);
@@ -216,7 +260,27 @@ body{
   font-size:10px;
 }
 
-.entry-card{
+.mood-row{
+  display:flex;
+  gap:6px;
+  margin-bottom:14px;
+}
+.mood-btn{
+  background:var(--ink-3);
+  border:1px solid var(--line);
+  border-radius:8px;
+  font-size:20px;
+  width:40px;
+  height:40px;
+  cursor:pointer;
+  opacity:.5;
+}
+.mood-btn.selected{
+  opacity:1;
+  border-color:var(--brass);
+  background:var(--ink-2);
+}
+.entry-row .mood{margin-right:6px;}
   background:var(--ink-2);
   border:1px solid var(--line);
   border-radius:10px;
@@ -484,7 +548,13 @@ textarea#editor::placeholder{color:var(--paper-dim);}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="lock-overlay hidden" id="lock-overlay">
+  <h2>기록장</h2>
+  <input type="password" id="lock-pin-input" inputmode="numeric" maxlength="8" placeholder="••••">
+  <button id="lock-unlock-btn">잠금 해제</button>
+  <div class="lock-msg" id="lock-msg"></div>
+</div>
+<div class="wrap" id="app-wrap">
 
   <div class="header">
     <div>
@@ -500,6 +570,7 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <span class="lunar-date" id="lunar-date"></span>
     <button class="nav-today-btn" id="family-toggle-btn" style="margin-left:auto;">기념일 관리</button>
     <button class="nav-today-btn" id="drive-toggle-btn">동기화</button>
+    <button class="nav-today-btn" id="lock-setup-btn">잠금 설정</button>
   </div>
   <div class="badge-row" id="badge-row"></div>
 
@@ -538,6 +609,13 @@ textarea#editor::placeholder{color:var(--paper-dim);}
 
   <div class="entry-card">
     <div class="editing-label" id="editing-label"></div>
+    <div class="mood-row" id="mood-row">
+      <button class="mood-btn" data-mood="😊" title="좋음">😊</button>
+      <button class="mood-btn" data-mood="🙂" title="괜찮음">🙂</button>
+      <button class="mood-btn" data-mood="😐" title="보통">😐</button>
+      <button class="mood-btn" data-mood="🙁" title="별로">🙁</button>
+      <button class="mood-btn" data-mood="😢" title="힘듦">😢</button>
+    </div>
     <div class="prompts">
       <button class="prompt-tag moss" data-t="오늘 잘한 것: ">오늘 잘한 것</button>
       <button class="prompt-tag rust" data-t="아쉬운 것: ">아쉬운 것</button>
@@ -591,6 +669,57 @@ function dateKey(d){
   return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
 }
 
+// ── 잠금 (PIN)
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+(function initLock(){
+  try{
+    const savedHash = localStorage.getItem('diary_pin_hash');
+    if(savedHash){
+      document.getElementById('lock-overlay').classList.remove('hidden');
+    }
+  }catch(e){}
+})();
+
+document.getElementById('lock-unlock-btn').addEventListener('click', async ()=>{
+  const input = document.getElementById('lock-pin-input');
+  const msg = document.getElementById('lock-msg');
+  const savedHash = localStorage.getItem('diary_pin_hash');
+  const tryHash = await sha256Hex(input.value);
+  if(tryHash === savedHash){
+    document.getElementById('lock-overlay').classList.add('hidden');
+    input.value = '';
+    msg.textContent = '';
+  } else {
+    msg.textContent = '잠금번호가 틀렸습니다';
+  }
+});
+document.getElementById('lock-pin-input').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter') document.getElementById('lock-unlock-btn').click();
+});
+
+document.getElementById('lock-setup-btn').addEventListener('click', async ()=>{
+  const existingHash = (()=>{ try{return localStorage.getItem('diary_pin_hash');}catch(e){return null;} })();
+  if(existingHash){
+    const ok = confirm('잠금을 해제(끄기)하시겠어요? 취소를 누르면 잠금번호를 새로 설정합니다.');
+    if(ok){
+      try{ localStorage.removeItem('diary_pin_hash'); }catch(e){}
+      alert('잠금이 꺼졌습니다.');
+      return;
+    }
+  }
+  const pin = prompt('사용할 잠금번호(숫자 4자리 이상)를 입력하세요:');
+  if(!pin || pin.length < 4) { if(pin!==null) alert('4자리 이상으로 설정해주세요.'); return; }
+  const confirmPin = prompt('한 번 더 입력해서 확인해주세요:');
+  if(pin !== confirmPin){ alert('입력한 번호가 서로 다릅니다. 다시 시도해주세요.'); return; }
+  const hash = await sha256Hex(pin);
+  try{ localStorage.setItem('diary_pin_hash', hash); }catch(e){}
+  alert('잠금이 설정되었습니다. 다음에 접속할 때부터 잠금번호를 입력해야 합니다.');
+});
+
 const today = new Date();
 document.getElementById('today-date').textContent =
   today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일';
@@ -609,6 +738,7 @@ const TERM_KO = {
 
 let family = [];
 let familyFileId = null;
+let editingFamilyIndex = null;
 
 async function loadFamilyFromDrive(){
   if(!accessToken || !driveFolderId) return;
@@ -709,10 +839,19 @@ function renderFamilyList(){
   family.forEach((f,idx)=>{
     const chip = document.createElement('div');
     chip.className='family-chip';
-    chip.innerHTML = '<span></span><button aria-label="삭제">×</button>';
+    chip.innerHTML = '<span style="cursor:pointer;"></span><button aria-label="삭제">×</button>';
     chip.querySelector('span').textContent = f.name+' · '+(f.calType==='solar'?'양력':'음력')+' '+f.month+'/'+f.day;
+    chip.querySelector('span').addEventListener('click',()=>{
+      document.getElementById('f-name').value = f.name;
+      document.getElementById('f-cal').value = f.calType;
+      document.getElementById('f-month').value = f.month;
+      document.getElementById('f-day').value = f.day;
+      editingFamilyIndex = idx;
+      document.getElementById('f-add').textContent = '수정 완료';
+    });
     chip.querySelector('button').addEventListener('click',()=>{
       family.splice(idx,1);
+      if(editingFamilyIndex===idx){ editingFamilyIndex=null; document.getElementById('f-add').textContent='추가'; }
       renderFamilyList();
       renderBadges(viewDate);
       saveFamilyToDrive();
@@ -735,7 +874,13 @@ document.getElementById('f-add').addEventListener('click',()=>{
   const month = parseInt(document.getElementById('f-month').value,10);
   const day = parseInt(document.getElementById('f-day').value,10);
   if(!name || !month || !day) return;
-  family.push({name, calType, month, day});
+  if(editingFamilyIndex !== null){
+    family[editingFamilyIndex] = {name, calType, month, day};
+    editingFamilyIndex = null;
+    document.getElementById('f-add').textContent = '추가';
+  } else {
+    family.push({name, calType, month, day});
+  }
   document.getElementById('f-name').value='';
   document.getElementById('f-month').value='';
   document.getElementById('f-day').value='';
@@ -847,6 +992,7 @@ async function ensureDriveFolder(){
 function entryToMarkdown(entry){
   let fm = '---\ndate: '+dateKey(entry.date)+'\n';
   if(entry.weather) fm += 'weather: '+entry.weather+'\n';
+  if(entry.mood) fm += 'mood: '+entry.mood+'\n';
   const photoIds = (entry.photos||[]).filter(p=>p.driveFileId).map(p=>p.driveFileId);
   if(photoIds.length) fm += 'photos: '+photoIds.join(',')+'\n';
   fm += '---\n';
@@ -856,6 +1002,7 @@ function entryToMarkdown(entry){
 function parseMarkdownEntry(text, filename, fileId){
   let dkey = filename.replace(/\.md$/,'');
   let weather = null;
+  let mood = null;
   let photos = [];
   let content = text;
   const fmMatch = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
@@ -863,15 +1010,17 @@ function parseMarkdownEntry(text, filename, fileId){
     const fm = fmMatch[1];
     const dateM = fm.match(/date:\s*(.+)/);
     const weatherM = fm.match(/weather:\s*(.+)/);
+    const moodM = fm.match(/mood:\s*(.+)/);
     const photosM = fm.match(/photos:\s*(.+)/);
     if(dateM) dkey = dateM[1].trim();
     if(weatherM) weather = weatherM[1].trim();
+    if(moodM) mood = moodM[1].trim();
     if(photosM) photos = photosM[1].trim().split(',').filter(Boolean).map(id=>({driveFileId:id}));
     content = fmMatch[2];
   }
   const d = new Date(dkey+'T00:00:00');
   if(isNaN(d)) return null;
-  return {date: d.toISOString(), content: content.trim(), weather, photos, driveFileId: fileId};
+  return {date: d.toISOString(), content: content.trim(), weather, mood, photos, driveFileId: fileId};
 }
 
 async function loadAllFromDrive(){
@@ -933,6 +1082,18 @@ async function saveEntryToDrive(entry){
 }
 
 // ── 사진 첨부
+let selectedMood = null;
+document.querySelectorAll('.mood-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    selectedMood = (selectedMood === btn.dataset.mood) ? null : btn.dataset.mood;
+    document.querySelectorAll('.mood-btn').forEach(b=>b.classList.toggle('selected', b.dataset.mood===selectedMood));
+  });
+});
+function setMoodUI(mood){
+  selectedMood = mood || null;
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.toggle('selected', b.dataset.mood===selectedMood));
+}
+
 let pendingPhotoFiles = []; // 아직 저장 안 한, 새로 고른 사진 파일들
 
 async function uploadPhotoToDrive(file){
@@ -1092,6 +1253,7 @@ function loadEntryForViewDate(){
   const existing = findEntry(viewDate);
   editor.value = existing ? existing.content : '';
   updateByteCount();
+  setMoodUI(existing ? existing.mood : null);
 
   const isToday = dateKey(viewDate) === dateKey(today);
   const label = document.getElementById('editing-label');
@@ -1187,7 +1349,7 @@ function renderTimeline(filter){
         '<div class="d"><span></span><button class="del-btn" title="삭제">삭제</button></div>'+
         '<div class="p"></div>'+
         '<div class="full"></div>';
-      row.querySelector('.d span').textContent = fmtDate(e.date)+(e.weather ? ' · '+e.weather : '');
+      row.querySelector('.d span').textContent = (e.mood ? e.mood+' ' : '')+fmtDate(e.date)+(e.weather ? ' · '+e.weather : '');
       row.querySelector('.p').textContent = firstLine;
       row.querySelector('.full').textContent = e.content;
       row.addEventListener('click',(evt)=>{
@@ -1280,9 +1442,10 @@ async function saveEntry(){
   if(existing){
     existing.content = editor.value;
     existing.weather = weather;
+    existing.mood = selectedMood;
     target = existing;
   } else {
-    target = {date: viewDate.toISOString(), content: editor.value, weather, photos: []};
+    target = {date: viewDate.toISOString(), content: editor.value, weather, mood: selectedMood, photos: []};
     entries.unshift(target);
   }
   if(!target.photos) target.photos = [];
