@@ -1,9 +1,9 @@
-const CACHE_NAME = 'diary-cache-v2';
+const CACHE_NAME = 'diary-cache-v3';
 const FILES_TO_CACHE = [
   './diary-prototype.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  './icon-192-v2.png',
+  './icon-512-v2.png'
 ];
 
 self.addEventListener('install', (event) => {
