@@ -32,10 +32,104 @@ body{
   min-height:100vh;
 }
 .wrap{
-  max-width:640px;
+  max-width:1080px;
   margin:0 auto;
   padding:48px 24px 96px;
 }
+.app-grid{
+  display:grid;
+  grid-template-columns:300px 1fr;
+  gap:32px;
+  align-items:start;
+}
+.sidebar{
+  position:sticky;
+  top:24px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+  max-height:calc(100vh - 48px);
+  overflow-y:auto;
+}
+.main-pane{
+  min-width:0;
+}
+@media (max-width:900px){
+  .app-grid{grid-template-columns:1fr;}
+  .sidebar{position:static;max-height:none;order:2;}
+  .main-pane{order:1;}
+}
+.calendar-widget{
+  background:var(--ink-2);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:16px;
+}
+.cal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.cal-month-label{
+  font-family:'Noto Serif KR',serif;
+  font-weight:700;
+  font-size:15px;
+}
+.cal-nav-btn{
+  background:transparent;
+  border:1px solid var(--line);
+  color:var(--paper-dim);
+  border-radius:6px;
+  width:26px;
+  height:26px;
+  cursor:pointer;
+  font-size:14px;
+  line-height:1;
+}
+.cal-nav-btn:hover{color:var(--paper);border-color:var(--paper-dim);}
+.cal-weekdays{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  font-size:11px;
+  color:var(--paper-dim);
+  text-align:center;
+  margin-bottom:4px;
+}
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:2px;
+}
+.cal-day{
+  position:relative;
+  aspect-ratio:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  border-radius:8px;
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  color:var(--paper);
+  font-family:'JetBrains Mono',monospace;
+}
+.cal-day:hover{background:var(--ink-3);}
+.cal-day.outside{color:var(--paper-dim);opacity:0.5;}
+.cal-day.is-today{box-shadow:inset 0 0 0 1px var(--brass-dim);}
+.cal-day.selected{background:var(--brass);color:var(--ink);font-weight:700;}
+.cal-day .dot{
+  position:absolute;
+  bottom:3px;
+  left:50%;
+  transform:translateX(-50%);
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:var(--moss);
+}
+.cal-day.selected .dot{background:var(--ink);}
 .header{
   display:flex;
   justify-content:space-between;
@@ -611,46 +705,66 @@ textarea#editor::placeholder{color:var(--paper-dim);}
     <div class="drive-status" id="gstatus">연결 안 됨 · 기록은 지금 이 브라우저에만 있어요</div>
   </div>
 
-  <div class="entry-card">
-    <div class="editing-label" id="editing-label"></div>
-    <div class="mood-row" id="mood-row">
-      <button class="mood-btn" data-mood="😊" title="좋음">😊</button>
-      <button class="mood-btn" data-mood="🙂" title="괜찮음">🙂</button>
-      <button class="mood-btn" data-mood="😐" title="보통">😐</button>
-      <button class="mood-btn" data-mood="🙁" title="별로">🙁</button>
-      <button class="mood-btn" data-mood="😢" title="힘듦">😢</button>
-    </div>
-    <div class="prompts">
-      <button class="prompt-tag moss" data-t="오늘 잘한 것: ">오늘 잘한 것</button>
-      <button class="prompt-tag rust" data-t="아쉬운 것: ">아쉬운 것</button>
-      <button class="prompt-tag" data-t="내일의 다짐: ">내일의 다짐</button>
-    </div>
-    <textarea id="editor" placeholder="오늘 하루는 어땠나요..."></textarea>
-    <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
-    <div class="photo-strip" id="photo-strip">
-      <button class="photo-add-btn" id="photo-add-btn" title="사진 추가">+</button>
-    </div>
-    <div class="entry-footer">
-      <span class="byte-count" id="byte-count">0 bytes</span>
-      <span class="weather-tag loading" id="weather-tag">날씨 확인 중...</span>
-      <button class="del-btn" id="delete-entry-btn" title="이 날짜 기록 삭제">삭제</button>
-      <span class="save-msg" id="save-msg">저장됨</span>
-      <button class="save-btn" id="save-btn">저장</button>
-    </div>
+  <div class="app-grid">
+    <aside class="sidebar">
+      <div class="calendar-widget" id="calendar-widget">
+        <div class="cal-header">
+          <button type="button" class="cal-nav-btn" id="cal-prev-btn" aria-label="이전 달">‹</button>
+          <div class="cal-month-label" id="cal-month-label"></div>
+          <button type="button" class="cal-nav-btn" id="cal-next-btn" aria-label="다음 달">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <div>
+        <div class="section-title">전체 기록</div>
+        <div class="section-sub">검색하거나 눌러서 펼쳐보세요</div>
+        <div class="search-row">
+          <input id="search" placeholder="키워드로 검색... (예: 산책, 프로젝트)">
+        </div>
+        <div id="timeline"></div>
+      </div>
+    </aside>
+
+    <main class="main-pane">
+      <div class="entry-card">
+        <div class="editing-label" id="editing-label"></div>
+        <div class="mood-row" id="mood-row">
+          <button class="mood-btn" data-mood="😊" title="좋음">😊</button>
+          <button class="mood-btn" data-mood="🙂" title="괜찮음">🙂</button>
+          <button class="mood-btn" data-mood="😐" title="보통">😐</button>
+          <button class="mood-btn" data-mood="🙁" title="별로">🙁</button>
+          <button class="mood-btn" data-mood="😢" title="힘듦">😢</button>
+        </div>
+        <div class="prompts">
+          <button class="prompt-tag moss" data-t="오늘 잘한 것: ">오늘 잘한 것</button>
+          <button class="prompt-tag rust" data-t="아쉬운 것: ">아쉬운 것</button>
+          <button class="prompt-tag" data-t="내일의 다짐: ">내일의 다짐</button>
+        </div>
+        <textarea id="editor" placeholder="오늘 하루는 어땠나요..."></textarea>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
+        <div class="photo-strip" id="photo-strip">
+          <button class="photo-add-btn" id="photo-add-btn" title="사진 추가">+</button>
+        </div>
+        <div class="entry-footer">
+          <span class="byte-count" id="byte-count">0 bytes</span>
+          <span class="weather-tag loading" id="weather-tag">날씨 확인 중...</span>
+          <button class="del-btn" id="delete-entry-btn" title="이 날짜 기록 삭제">삭제</button>
+          <span class="save-msg" id="save-msg">저장됨</span>
+          <button class="save-btn" id="save-btn">저장</button>
+        </div>
+      </div>
+
+      <div class="section-title">이 날, 지난 기록들</div>
+      <div class="section-sub">선택한 날짜와 같은 월/일에 남긴 과거의 기록입니다</div>
+      <div class="sameday-row" id="sameday-row"></div>
+
+      <div class="stats-bar" id="stats-bar"></div>
+    </main>
   </div>
-
-  <div class="section-title">이 날, 지난 기록들</div>
-  <div class="section-sub">선택한 날짜와 같은 월/일에 남긴 과거의 기록입니다</div>
-  <div class="sameday-row" id="sameday-row"></div>
-
-  <div class="stats-bar" id="stats-bar"></div>
-
-  <div class="section-title">전체 기록</div>
-  <div class="section-sub">검색하거나 눌러서 펼쳐보세요</div>
-  <div class="search-row">
-    <input id="search" placeholder="키워드로 검색... (예: 산책, 프로젝트)">
-  </div>
-  <div id="timeline"></div>
 
 </div>
 
@@ -731,6 +845,9 @@ document.getElementById('today-date').textContent =
 // 지금 화면에서 보고/쓰고 있는 날짜. 기본은 오늘이지만, 날짜 이동으로 바뀔 수 있다.
 let viewDate = new Date(today);
 document.getElementById('view-date-input').value = dateKey(viewDate);
+
+// 사이드바 캘린더 위젯이 지금 보여주고 있는 월 (viewDate와 별개로, 달력만 넘겨볼 수 있게)
+let calMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
 
 // ── 음력 / 절기 / 명절 / 가족 생일
 const TERM_KO = {
@@ -1048,6 +1165,7 @@ async function loadAllFromDrive(){
     renderStats();
     renderTimeline(document.getElementById('search').value);
     renderSameDay();
+    renderMonthCalendar();
   }
 }
 
@@ -1192,6 +1310,7 @@ document.getElementById('photo-input').addEventListener('change', (e)=>{
 // 실제 사용 시에는 Drive에 저장된 기록이 여기로 불러와진다.
 let entries = [];
 entries.sort((a,b)=>new Date(b.date)-new Date(a.date));
+renderMonthCalendar();
 
 // ── 날씨: 하루에 한 번만 API를 호출하고, 이후엔 캐시된 값을 재사용한다.
 const weatherCache = {}; // { '2026-07-25': '맑음 18°C' }
@@ -1280,6 +1399,7 @@ function loadEntryForViewDate(){
   renderLunarHeader(viewDate);
   renderBadges(viewDate);
   renderSameDay();
+  renderMonthCalendar();
   pendingPhotoFiles = [];
   renderPhotoStrip();
 }
@@ -1288,12 +1408,67 @@ document.getElementById('view-date-input').addEventListener('change',(e)=>{
   if(!e.target.value) return;
   const [y,m,dd] = e.target.value.split('-').map(Number);
   viewDate = new Date(y, m-1, dd);
+  calMonth = new Date(y, m-1, 1);
   loadEntryForViewDate();
 });
 document.getElementById('nav-today-btn').addEventListener('click',()=>{
   viewDate = new Date(today);
+  calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   document.getElementById('view-date-input').value = dateKey(viewDate);
   loadEntryForViewDate();
+});
+
+// ── 사이드바 월별 캘린더: 기록이 있는 날짜에 점을 표시하고, 클릭하면 해당 날짜로 이동한다.
+function renderMonthCalendar(){
+  const grid = document.getElementById('cal-grid');
+  const label = document.getElementById('cal-month-label');
+  if(!grid || !label) return;
+
+  const year = calMonth.getFullYear();
+  const month = calMonth.getMonth();
+  label.textContent = year+'년 '+(month+1)+'월';
+
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+  const startOffset = 1 - firstWeekday;
+  const todayKey = dateKey(today);
+  const selectedKey = dateKey(viewDate);
+
+  let html = '';
+  for(let i=0; i<totalCells; i++){
+    const cellDate = new Date(year, month, startOffset + i);
+    const key = dateKey(cellDate);
+    const outside = cellDate.getMonth() !== month;
+    const hasEntry = !!findEntry(cellDate);
+    const classes = ['cal-day'];
+    if(outside) classes.push('outside');
+    if(key === todayKey) classes.push('is-today');
+    if(key === selectedKey) classes.push('selected');
+    html += '<button type="button" class="'+classes.join(' ')+'" data-date="'+key+'">'
+          + cellDate.getDate()
+          + (hasEntry ? '<span class="dot"></span>' : '')
+          + '</button>';
+  }
+  grid.innerHTML = html;
+}
+
+document.getElementById('cal-grid').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.cal-day');
+  if(!btn) return;
+  const [y,m,d] = btn.dataset.date.split('-').map(Number);
+  viewDate = new Date(y, m-1, d);
+  calMonth = new Date(y, m-1, 1);
+  document.getElementById('view-date-input').value = dateKey(viewDate);
+  loadEntryForViewDate();
+});
+document.getElementById('cal-prev-btn').addEventListener('click', ()=>{
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()-1, 1);
+  renderMonthCalendar();
+});
+document.getElementById('cal-next-btn').addEventListener('click', ()=>{
+  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 1);
+  renderMonthCalendar();
 });
 
 function renderSameDay(){
