@@ -1120,8 +1120,9 @@ function entryToMarkdown(entry){
   return fm + entry.content;
 }
 
-function parseMarkdownEntry(text, filename, fileId){
-  let dkey = filename.replace(/\.md$/,'');
+function parseMarkdownEntry(text, filename, fileId, modifiedTime){
+  const fallbackKey = filename.replace(/\.md$/,''); // frontmatter의 date가 깨졌을 때 되돌아갈 값
+  let dkey = fallbackKey;
   let weather = null;
   let mood = null;
   let photos = [];
@@ -1139,14 +1140,17 @@ function parseMarkdownEntry(text, filename, fileId){
     if(photosM) photos = photosM[1].trim().split(',').filter(Boolean).map(id=>({driveFileId:id}));
     content = fmMatch[2];
   }
-  const d = new Date(dkey+'T00:00:00');
-  if(isNaN(d)) return null;
-  return {date: d.toISOString(), content: content.trim(), weather, mood, photos, driveFileId: fileId};
+  let d = new Date(dkey+'T00:00:00');
+  if(isNaN(d)){
+    d = new Date(fallbackKey+'T00:00:00'); // frontmatter의 date만 깨진 경우 파일명 날짜로 복구
+  }
+  if(isNaN(d)) return null; // 파일명 날짜조차 유효하지 않을 때만 최종 포기
+  return {date: d.toISOString(), content: content.trim(), weather, mood, photos, driveFileId: fileId, driveModifiedTime: modifiedTime || null};
 }
 
 async function loadAllFromDrive(){
   const q = "'"+driveFolderId+"' in parents and trashed=false";
-  const res = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)&pageSize=1000', {
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name,modifiedTime)&pageSize=1000', {
     headers:{Authorization:'Bearer '+accessToken}
   });
   const data = await res.json();
@@ -1156,7 +1160,7 @@ async function loadAllFromDrive(){
       headers:{Authorization:'Bearer '+accessToken}
     });
     const text = await contentRes.text();
-    const parsed = parseMarkdownEntry(text, f.name, f.id);
+    const parsed = parseMarkdownEntry(text, f.name, f.id, f.modifiedTime);
     if(parsed) loaded.push(parsed);
   }
   if(loaded.length){
@@ -1176,11 +1180,36 @@ async function saveEntryToDrive(entry){
   setDriveStatus('동기화 중...', true);
 
   if(entry.driveFileId){
-    await fetch('https://www.googleapis.com/upload/drive/v3/files/'+entry.driveFileId+'?uploadType=media', {
+    // 다른 기기(PC/모바일)가 먼저 저장했는지 확인 — 마지막 저장이 덮어쓰는 것을 방지
+    if(entry.driveModifiedTime){
+      try{
+        const metaRes = await fetch('https://www.googleapis.com/drive/v3/files/'+entry.driveFileId+'?fields=modifiedTime', {
+          headers:{Authorization:'Bearer '+accessToken}
+        });
+        const meta = await metaRes.json();
+        if(meta.modifiedTime && meta.modifiedTime !== entry.driveModifiedTime){
+          const overwrite = confirm(
+            fmtDate(entry.date)+' 기록이 다른 기기에서 먼저 저장되었습니다.\n'+
+            '지금 저장하면 그 내용을 덮어씁니다. 계속할까요?\n'+
+            '(취소하면 저장하지 않고, "다시 불러오기"로 최신 내용을 확인하세요.)'
+          );
+          if(!overwrite){
+            setDriveStatus('저장 취소됨 · 다른 기기의 변경사항이 있습니다', true);
+            throw new Error('SAVE_CANCELLED_CONFLICT');
+          }
+        }
+      }catch(e){
+        if(e.message === 'SAVE_CANCELLED_CONFLICT') throw e;
+        // 메타데이터 조회 실패(네트워크 등)는 충돌 확인을 건너뛰고 저장을 계속 진행
+      }
+    }
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files/'+entry.driveFileId+'?uploadType=media&fields=modifiedTime', {
       method:'PATCH',
       headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'text/markdown'},
       body: content
     });
+    const updated = await res.json();
+    if(updated.modifiedTime) entry.driveModifiedTime = updated.modifiedTime;
   } else {
     const boundary = 'diary-boundary-'+Date.now();
     const metadata = {name: filename, parents:[driveFolderId]};
@@ -1192,13 +1221,14 @@ async function saveEntryToDrive(entry){
       'Content-Type: text/markdown\r\n\r\n'+
       content+'\r\n'+
       '--'+boundary+'--';
-    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime', {
       method:'POST',
       headers:{Authorization:'Bearer '+accessToken, 'Content-Type':'multipart/related; boundary='+boundary},
       body
     });
     const created = await res.json();
     entry.driveFileId = created.id;
+    if(created.modifiedTime) entry.driveModifiedTime = created.modifiedTime;
   }
   setDriveStatus('Google Drive 연결됨 · 방금 동기화됨', true);
 }
@@ -1655,9 +1685,12 @@ async function saveEntry(){
 
   try{
     await saveEntryToDrive(target); // Drive 저장이 끝날 때까지 기다린 뒤에야 버튼이 다시 눌린다
-  }finally{
+  }catch(e){
     saveBtn.disabled = false;
+    if(e.message === 'SAVE_CANCELLED_CONFLICT') return; // 충돌 확인 취소 — 성공 메시지 없이 종료
+    throw e;
   }
+  saveBtn.disabled = false;
 
   updateByteCount();
   renderSameDay();
